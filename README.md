@@ -62,23 +62,18 @@ This is a **Resume Parser** application built using **FastAPI**, with **Gemini 2
 
 2. **Set Environment Variables: Create a .env file in the project root and add**:
    ```bash
-   python -m venv venv
-   venv\scripts\activate
+   GEMINI_API_KEY=your_gemini_api_key
+    PG_DB_URL=your_neon_db_connection_url
 
 3. **Install Dependencies:**:
    ```bash
    pip install -r requirements.txt
 
-4. **Set Environment Variables: Create a .env file in the project root and add**:
-   ```bash
-    GEMINI_API_KEY=your_gemini_api_key
-    PG_DB_URL=your_neon_db_connection_url
-
-5. **Build and Run the Docker Container**:
+4. **Build and Run the Docker Container**:
    ```bash
     docker-compose up --build
 
-6. **Access To The AppliCation**:
+5. **Access To The AppliCation**:
     - Open http://localhost:8000/ And You Can See The Application UI
     - Upload resumes and check the functionality.
     - To Check the Log Checkout The file named --log-level info which is automatically created in the project directory
