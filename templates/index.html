@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Subtle background animation */
+        body {
+            background: linear-gradient(45deg, #1e3a8a, #1e40af, #3b82f6, #1e3a8a);
+            background-size: 400%;
+            animation: gradient 15s ease infinite;
+        }
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 50;
+        }
+        .modal-content {
+            background: #1e3a8a;
+            margin: 5% auto;
+            padding: 2rem;
+            width: 90%;
+            max-width: 800px;
+            border-radius: 0.5rem;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tab-button:hover {
+            background-color: #2b4c9b;
+            transition: background-color 0.3s ease;
+        }
+        .tab-button.active {
+            border-bottom: 2px solid #3b82f6;
+            color: #60a5fa;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center text-gray-200">
+    <div class="w-full max-w-5xl mx-auto p-6">
+        <!-- Tabs -->
+        <div class="border-b border-gray-600">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button id="tab-upload" class="tab-button active px-1 py-2 font-medium text-sm">Upload Resume</button>
+                <button id="tab-history" class="tab-button border-b-2 border-transparent text-gray-400 px-1 py-2 font-medium text-sm">Resume History</button>
+            </nav>
+        </div>
+
+        <!-- Tab Content -->
+        <div id="tab-content-upload" class="tab-content mt-6">
+            <!-- Upload Section -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold text-blue-300 mb-4">Upload Your Resume</h2>
+                <div class="flex items-center space-x-4">
+                    <input type="file" id="resume-upload" accept=".pdf,.doc,.docx" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700">
+                    <button onclick="uploadResume()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-full">Analyze</button>
+                </div>
+                <div id="loading" class="hidden mt-4">
+                    <div class="loader"></div>
+                    <p class="text-center text-gray-400 mt-2">Analyzing resume...</p>
+                </div>
+            </div>
+
+            <!-- Results Section (Hidden until analysis) -->
+            <div id="results-section" class="hidden mt-6 space-y-6">
+                <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold text-blue-300 mb-4">Extracted Information</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-300">Personal Details</h3>
+                            <p><strong>Name:</strong> <span id="name"></span></p>
+                            <p><strong>Email:</strong> <span id="email"></span></p>
+                            <p><strong>Phone:</strong> <span id="phone"></span></p>
+                            <p><strong>Address:</strong> <span id="address"></span></p>
+                            <p><strong>LinkedIn:</strong> <span id="linkedin"></span></p>
+                            <p><strong>GitHub:</strong> <span id="github"></span></p>
+                            <p><strong>Portfolio:</strong> <span id="portfolio"></span></p>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-300">Education</h3>
+                            <ul id="education" class="list-disc list-inside text-gray-400"></ul>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="text-lg font-medium text-gray-300">Summary</h3>
+                        <p id="summary" class="text-gray-400"></p>
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="text-lg font-medium text-gray-300">Skills</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p><strong>Technical:</strong></p>
+                                <ul id="skills-technical" class="list-disc list-inside text-gray-400"></ul>
+                            </div>
+                            <div>
+                                <p><strong>Soft:</strong></p>
+                                <ul id="skills-soft" class="list-disc list-inside text-gray-400"></ul>
+                            </div>
+                            <div>
+                                <p><strong>Tools:</strong></p>
+                                <ul id="skills-tools" class="list-disc list-inside text-gray-400"></ul>
+                            </div>
+                            <div>
+                                <p><strong>Frameworks:</strong></p>
+                                <ul id="skills-frameworks" class="list-disc list-inside text-gray-400"></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="text-lg font-medium text-gray-300">Work Experience</h3>
+                        <ul id="work-experience" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="text-lg font-medium text-gray-300">Certifications</h3>
+                        <ul id="certifications" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="text-lg font-medium text-gray-300">Projects</h3>
+                        <ul id="projects" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="text-lg font-medium text-gray-300">Publications</h3>
+                        <ul id="publications" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="text-lg font-medium text-gray-300">Awards</h3>
+                        <ul id="awards" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="text-lg font-medium text-gray-300">Other</h3>
+                        <p><strong>Volunteer Work:</strong></p>
+                        <ul id="volunteer-work" class="list-disc list-inside text-gray-400"></ul>
+                        <p><strong>Languages:</strong></p>
+                        <ul id="languages" class="list-disc list-inside text-gray-400"></ul>
+                        <p><strong>Hobbies:</strong></p>
+                        <ul id="hobbies" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold text-blue-300 mb-4">Improvement Suggestions</h2>
+                    <ul id="improvements" class="list-disc list-inside text-gray-400"></ul>
+                </div>
+
+                <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold text-blue-300 mb-4">Skills to Learn</h2>
+                    <ul id="skills-to-learn" class="list-disc list-inside text-gray-400"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="tab-content-history" class="tab-content mt-6 hidden">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold text-blue-300 mb-4">Resume History</h2>
+                <div id="history-loading" class="hidden">
+                    <div class="loader"></div>
+                    <p class="text-center text-gray-400 mt-2">Loading resume history...</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-400">
+                        <thead class="text-xs text-gray-300 uppercase bg-gray-700">
+                            <tr>
+                                <th class="px-6 py-3">File Name</th>
+                                <th class="px-6 py-3">Name</th>
+                                <th class="px-6 py-3">Email</th>
+                                <th class="px- ragged-right py-3">Phone</th>
+                                <th class="px-6 py-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for Details -->
+        <div id="details-modal" class="modal">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-blue-300">Resume Details</h2>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-white">×</button>
+                </div>
+                <div id="modal-loading" class="hidden">
+                    <div class="loader"></div>
+                    <p class="text-center text-gray-400 mt-2">Loading details...</p>
+                </div>
+                <div id="modal-content" class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Personal Details</h3>
+                        <p><strong>Name:</strong> <span id="modal-name"></span></p>
+                        <p><strong>Email:</strong> <span id="modal-email"></span></p>
+                        <p><strong>Phone:</strong> <span id="modal-phone"></span></p>
+                        <p><strong>Address:</strong> <span id="modal-address"></span></p>
+                        <p><strong>LinkedIn:</strong> <span id="modal-linkedin"></span></p>
+                        <p><strong>GitHub:</strong> <span id="modal-github"></span></p>
+                        <p><strong>Portfolio:</strong> <span id="modal-portfolio"></span></p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Education</h3>
+                        <ul id="modal-education" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Summary</h3>
+                        <p id="modal-summary" class="text-gray-400"></p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Skills</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p><strong>Technical:</strong></p>
+                                <ul id="modal-skills-technical" class="list-disc list-inside text-gray-400"></ul>
+                            </div>
+                            <div>
+                                <p><strong>Soft:</strong></p>
+                                <ul id="modal-skills-soft" class="list-disc list-inside text-gray-400"></ul>
+                            </div>
+                            <div>
+                                <p><strong>Tools:</strong></p>
+                                <ul id="modal-skills-tools" class="list-disc list-inside text-gray-400"></ul>
+                            </div>
+                            <div>
+                                <p><strong>Frameworks:</strong></p>
+                                <ul id="modal-skills-frameworks" class="list-disc list-inside text-gray-400"></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Work Experience</h3>
+                        <ul id="modal-work-experience" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Certifications</h3>
+                        <ul id="modal-certifications" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Projects</h3>
+                        <ul id="modal-projects" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Publications</h3>
+                        <ul id="modal-publications" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Awards</h3>
+                        <ul id="modal-awards" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Other</h3>
+                        <p><strong>Volunteer Work:</strong></p>
+                        <ul id="modal-volunteer-work" class="list-disc list-inside text-gray-400"></ul>
+                        <p><strong>Languages:</strong></p>
+                        <ul id="modal-languages" class="list-disc list-inside text-gray-400"></ul>
+                        <p><strong>Hobbies:</strong></p>
+                        <ul id="modal-hobbies" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Improvement Suggestions</h3>
+                        <ul id="modal-improvements" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300">Skills to Learn</h3>
+                        <ul id="modal-skills-to-learn" class="list-disc list-inside text-gray-400"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        const tabs = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.classList.remove('active');
+                    t.classList.add('text-gray-400');
+                });
+                tabContents.forEach(content => content.classList.add('hidden'));
+
+                tab.classList.add('active');
+                tab.classList.remove('text-gray-400');
+                document.getElementById(`tab-content-${tab.id.split('-')[1]}`).classList.remove('hidden');
+
+                if (tab.id === 'tab-history') {
+                    fetchResumeHistory();
+                }
+            });
+        });
+
+        // Helper function to populate resume data
+        function populateResumeData(data, prefix = '') {
+            const parsedData = data.parsed_data;
+
+            // Helper function to safely set text content
+            const setTextContent = (elementId, value) => {
+                const element = document.getElementById(`${prefix}${elementId}`);
+                if (element) {
+                    element.textContent = value ?? 'N/A';
+                }
+            };
+
+            setTextContent('name', parsedData.fullName);
+            setTextContent('email', parsedData.contactDetails?.email);
+            setTextContent('phone', parsedData.contactDetails?.phone);
+            setTextContent('address', parsedData.contactDetails?.address);
+            const setLinkContent = (elementId, value) => {
+                const element = document.getElementById(`${prefix}${elementId}`);
+                if (element) {
+                    if (value && (value.startsWith('http://') || value.startsWith('https://'))) {
+                        element.innerHTML = `<a href="${value}" class="text-blue-400" target="_blank">${value}</a>`;
+                    } else {
+                        element.textContent = 'Link not found in the Resume';
+                    }
+                }
+            };
+
+            setLinkContent('linkedin', parsedData.contactDetails?.linkedIn);
+            setLinkContent('github', parsedData.contactDetails?.gitHub);
+            setLinkContent('portfolio', parsedData.contactDetails?.portfolio);
+            setTextContent('summary', parsedData.summary);
+
+            const educationList = document.getElementById(`${prefix}education`);
+            if (educationList) {
+                educationList.innerHTML = '';
+                (parsedData.education || []).forEach(edu => {
+                    const li = document.createElement('li');
+                    li.textContent = `${edu.degree || 'N/A'} in ${edu.major || 'N/A'}, ${edu.institution || 'N/A'}, ${edu.graduationYear || 'N/A'}`;
+                    educationList.appendChild(li);
+                });
+            }
+
+            const skillsTechnical = document.getElementById(`${prefix}skills-technical`);
+            if (skillsTechnical) {
+                skillsTechnical.innerHTML = '';
+                (parsedData.skills?.technical || []).forEach(skill => {
+                    const li = document.createElement('li');
+                    li.textContent = skill || 'N/A';
+                    skillsTechnical.appendChild(li);
+                });
+            }
+
+            const skillsSoft = document.getElementById(`${prefix}skills-soft`);
+            if (skillsSoft) {
+                skillsSoft.innerHTML = '';
+                if (parsedData.skills?.soft && parsedData.skills.soft.length > 0) {
+                    parsedData.skills.soft.forEach(skill => {
+                        const li = document.createElement('li');
+                        li.textContent = skill || 'N/A';
+                        skillsSoft.appendChild(li);
+                    });
+                } else {
+                    skillsSoft.innerHTML = '<li class="text-gray-500">Soft skills not available in the resume.</li>';
+                }
+            }
+
+            const skillsTools = document.getElementById(`${prefix}skills-tools`);
+            if (skillsTools) {
+                skillsTools.innerHTML = '';
+                if (parsedData.skills?.tools && parsedData.skills.tools.length > 0) {
+                    parsedData.skills.tools.forEach(tool => {
+                        const li = document.createElement('li');
+                        li.textContent = tool || 'N/A';
+                        skillsTools.appendChild(li);
+                    });
+                } else {
+                    skillsTools.innerHTML = '<li class="text-gray-500">No tools available in the resume.</li>';
+                }
+            }
+
+            const skillsFrameworks = document.getElementById(`${prefix}skills-frameworks`);
+            if (skillsFrameworks) {
+                skillsFrameworks.innerHTML = '';
+                if (parsedData.skills?.frameworks && parsedData.skills.frameworks.length > 0) {
+                    parsedData.skills.frameworks.forEach(framework => {
+                        const li = document.createElement('li');
+                        li.textContent = framework || 'N/A';
+                        skillsFrameworks.appendChild(li);
+                    });
+                } else {
+                    skillsFrameworks.innerHTML = '<li class="text-gray-500">No frameworks available in the resume.</li>';
+                }
+            }
+
+            const workExperienceList = document.getElementById(`${prefix}work-experience`);
+            if (workExperienceList) {
+                workExperienceList.innerHTML = '';
+                if (parsedData.workExperience && parsedData.workExperience.length > 0) {
+                    parsedData.workExperience.forEach(exp => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<strong>${exp.jobTitle || 'N/A'}</strong> at ${exp.company || 'N/A'}, ${exp.location || 'N/A'} (${exp.startDate || 'N/A'} - ${exp.endDate || 'N/A'})<br>${(exp.responsibilities || []).join('<br>') || 'N/A'}`;
+                        workExperienceList.appendChild(li);
+                    });
+                } else {
+                    workExperienceList.innerHTML = '<li class="text-gray-500">No work experience available in the resume.</li>';
+                }
+            }
+
+            const certificationsList = document.getElementById(`${prefix}certifications`);
+            if (certificationsList) {
+                certificationsList.innerHTML = '';
+                (parsedData.certifications || []).forEach(cert => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `${cert.name || 'N/A'} by ${cert.issuer || 'N/A'}, ${cert.issueDate || 'N/A'}${cert.expirationDate ? ` - ${cert.expirationDate}` : ''}${cert.certificateLink ? ` (<a href="${cert.certificateLink}" class="text-blue-400" target="_blank">Link</a>)` : ''}`;
+                    certificationsList.appendChild(li);
+                });
+            }
+
+            const projectsList = document.getElementById(`${prefix}projects`);
+            if (projectsList) {
+                projectsList.innerHTML = '';
+                (parsedData.projects || []).forEach(project => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${project.name || 'N/A'}</strong>: ${project.description || 'N/A'}<br>Technologies: ${(project.technologies || []).join(', ') || 'N/A'}<br>${project.livelink?.[0] && project.livelink[0] !== 'Live Link' ? `Live: <a href="${project.livelink[0]}" class="text-blue-400" target="_blank">${project.livelink[0]}</a><br>` : ''}${project['Github link']?.[0] && project['Github link'][0] !== 'Github' ? `GitHub: <a href="${project['Github link'][0]}" class="text-blue-400" target="_blank">${project['Github link'][0]}</a><br>` : ''}Duration: ${project.duration || 'N/A'}`;
+                    projectsList.appendChild(li);
+                });
+            }
+
+            const publicationsList = document.getElementById(`${prefix}publications`);
+            if (publicationsList) {
+                publicationsList.innerHTML = '';
+                if (parsedData.publications && parsedData.publications.length > 0) {
+                    parsedData.publications.forEach(pub => {
+                        const li = document.createElement('li');
+                        li.textContent = pub || 'N/A';
+                        publicationsList.appendChild(li);
+                    });
+                } else {
+                    publicationsList.innerHTML = '<li class="text-gray-500">No publications available in the resume.</li>';
+                }
+            }
+
+            const awardsList = document.getElementById(`${prefix}awards`);
+            if (awardsList) {
+                awardsList.innerHTML = '';
+                if (parsedData.awards && parsedData.awards.length > 0) {
+                    parsedData.awards.forEach(award => {
+                        const li = document.createElement('li');
+                        li.textContent = award || 'N/A';
+                        awardsList.appendChild(li);
+                    });
+                } else {
+                    awardsList.innerHTML = '<li class="text-gray-500">No awards available in the resume.</li>';
+                }
+            }
+
+            const volunteerWorkList = document.getElementById(`${prefix}volunteer-work`);
+            if (volunteerWorkList) {
+                volunteerWorkList.innerHTML = '';
+                if (parsedData.other?.volunteerWork && parsedData.other.volunteerWork.length > 0) {
+                    parsedData.other.volunteerWork.forEach(vol => {
+                        const li = document.createElement('li');
+                        li.textContent = vol || 'N/A';
+                        volunteerWorkList.appendChild(li);
+                    });
+                } else {
+                    volunteerWorkList.innerHTML = '<li class="text-gray-500">No volunteer work available in the resume.</li>';
+                }
+            }
+
+            const languagesList = document.getElementById(`${prefix}languages`);
+            if (languagesList) {
+                languagesList.innerHTML = '';
+                if (parsedData.other?.languages && parsedData.other.languages.length > 0) {
+                    parsedData.other.languages.forEach(lang => {
+                        const li = document.createElement('li');
+                        li.textContent = lang || 'N/A';
+                        languagesList.appendChild(li);
+                    });
+                } else {
+                    languagesList.innerHTML = '<li class="text-gray-500">No languages available in the resume.</li>';
+                }
+            }
+
+            const hobbiesList = document.getElementById(`${prefix}hobbies`);
+            if (hobbiesList) {
+                hobbiesList.innerHTML = '';
+                if (parsedData.other?.hobbies && parsedData.other.hobbies.length > 0) {
+                    parsedData.other.hobbies.forEach(hobby => {
+                        const li = document.createElement('li');
+                        li.textContent = hobby || 'N/A';
+                        hobbiesList.appendChild(li);
+                    });
+                } else {
+                    hobbiesList.innerHTML = '<li class="text-gray-500">No hobbies available in the resume.</li>';
+                }
+            }
+
+            const improvementsList = document.getElementById(`${prefix}improvements`);
+            if (improvementsList) {
+                improvementsList.innerHTML = '';
+                (parsedData.improvement_areas || []).forEach(imp => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${(imp.area || []).join(', ') || 'N/A'}</strong>: ${(imp.suggestion || []).join(', ') || 'N/A'}`;
+                    improvementsList.appendChild(li);
+                });
+            }
+
+            const skillsToLearnList = document.getElementById(`${prefix}skills-to-learn`);
+            if (skillsToLearnList) {
+                skillsToLearnList.innerHTML = '';
+                (parsedData.upskill_suggestions || []).forEach(skill => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${(skill.skill || []).join(', ') || 'N/A'}</strong>: ${(skill.reason || []).join(', ') || 'N/A'}`;
+                    skillsToLearnList.appendChild(li);
+                });
+            }
+        }
+
+        // Upload resume
+        async function uploadResume() {
+            const fileInput = document.getElementById('resume-upload');
+            const loading = document.getElementById('loading');
+            const resultsSection = document.getElementById('results-section');
+
+            if (fileInput.files.length === 0) {
+                resultsSection.innerHTML = '<p class="text-red-400">Please select a file to upload.</p>';
+                resultsSection.classList.remove('hidden');
+                return;
+            }
+
+            loading.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                apiUrl = "/upload_resume/"
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to upload resume');
+                }
+
+                const data = await response.json();
+                loading.classList.add('hidden');
+                resultsSection.classList.remove('hidden');
+                populateResumeData(data);
+            } catch (error) {
+                loading.classList.add('hidden');
+                resultsSection.classList.remove('hidden');
+                resultsSection.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Fetch resume history
+        async function fetchResumeHistory() {
+            const historyTable = document.getElementById('history-table');
+            const historyLoading = document.getElementById('history-loading');
+
+            historyLoading.classList.remove('hidden');
+            historyTable.innerHTML = '';
+
+            try {
+                
+                const apiUrl = "{{ request.url_for('get_resumes') }}";
+                const response = await fetch(apiUrl, {
+                    method: 'GET'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch resume history');
+                }
+
+                const data = await response.json();
+                historyLoading.classList.add('hidden');
+
+                data.forEach(item => {
+                   const row = document.createElement('tr');
+                   const params = new URLSearchParams({
+                                file_path: item.filepath,
+                                });
+                    row.className = 'border-b border-gray-600';
+                    row.innerHTML = `
+                        <td class="px-6 py-4">${item.filename || 'N/A'}</td>
+                        <td class="px-6 py-4">${item.parsed_data?.fullName || 'N/A'}</td>
+                        <td class="px-6 py-4">${item.parsed_data?.contactDetails?.email || 'N/A'}</td>
+                        <td class="px-6 py-4">${item.parsed_data?.contactDetails?.phone || 'N/A'}</td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center space-x-2">
+                                <button onclick="openModal(${item.id})" 
+                                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded">
+                                    Details
+                                </button>
+                                <button  
+                                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded flex items-center justify-center">
+                                    <a href = "/download/resume/?${params.toString()}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" 
+                                        class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"/>
+                                    </svg>
+                                    </a>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    historyTable.appendChild(row);
+                });
+            } catch (error) {
+                historyLoading.classList.add('hidden');
+                historyTable.innerHTML = `<tr><td colspan="5" class="text-red-400 px-6 py-4">Error: ${error.message}</td></tr>`;
+            }
+        }
+
+        
+        // Open modal with resume details
+        async function openModal(id) {
+            const modal = document.getElementById('details-modal');
+            const modalContent = document.getElementById('modal-content');
+            const modalLoading = document.getElementById('modal-loading');
+
+            modalLoading.classList.remove('hidden');
+            modalContent.classList.add('hidden');
+            modal.style.display = 'block';
+
+            try {
+                const apiUrl = `/resume/details/${id}`;
+                const response = await fetch(apiUrl, {
+                    method: 'GET'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch resume details');
+                }
+
+                const data = await response.json();
+                modalLoading.classList.add('hidden');
+                modalContent.classList.remove('hidden');
+                populateResumeData(data, 'modal-');
+            } catch (error) {
+                modalLoading.classList.add('hidden');
+                modalContent.classList.remove('hidden');
+                modalContent.innerHTML = `<p class="text-red-400">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('details-modal').style.display = 'none';
+            document.getElementById('modal-content').classList.remove('hidden');
+            document.getElementById('modal-loading').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
