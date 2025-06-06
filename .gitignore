@@ -51,3 +51,6 @@ htmlcov/
 # VSCode settings
 .vscode/
 .settings/
+
+--log-level info
+--log-file logs/app.log 
