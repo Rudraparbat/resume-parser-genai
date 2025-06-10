@@ -78,8 +78,8 @@ async def Resumeuploader(file : file_dependency , db : db_dependency) :
         asyncio.create_task(SaveDataTodb(load_data , filename , filepath , db))
 
         return {
-            "file name" : filename , 
-            "file path" : filepath,
+            "filename" : filename , 
+            "filepath" : filepath,
             "parsed_data" : load_data
         }
     except Exception as e :
@@ -97,7 +97,12 @@ async def GetUploadedResumeDetails(db : db_dependency) :
         for resumes in resume_details :
             resumes.parsed_data = await decode_parsed_data(resumes.parsed_data)
 
-        return resume_details
+
+        return {
+            "message" :"SUCCESS",
+            "Fetched_Data" : True,
+            "resume_details" : resume_details
+            }
     
     except Exception as e :
         return HTTPException(status_code= 500 , detail= str(e))

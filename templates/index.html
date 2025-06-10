@@ -593,7 +593,8 @@
                     throw new Error('Failed to fetch resume history');
                 }
 
-                const data = await response.json();
+                const responses = await response.json();
+                const data = responses.resume_details
                 historyLoading.classList.add('hidden');
 
                 data.forEach(item => {
